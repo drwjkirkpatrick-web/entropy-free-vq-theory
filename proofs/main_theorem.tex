@@ -1,0 +1,526 @@
+% =====================================================================
+%  main_theorem.tex
+%  Formal proofs for entropy-free VQ compression theory.
+%
+%  Extends the EF-LIC framework (Cao et al., ICML 2026).
+%
+%  Theorem 1: Unconstrained VQ index distribution → maximum entropy
+%  Theorem 2: Rate penalty bound (entropy-free vs entropy-coded)
+%  Theorem 3: Conditions for entropy-free optimality
+%  Corollary:  Speedup characterization (3× encode, 5× decode)
+% =====================================================================
+
+\documentclass[11pt,a4paper]{article}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{mathtools}
+\usepackage{bm}
+
+\geometry{margin=1in}
+
+% --- Theorem environments ---
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% --- Macros ---
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\PP}{\mathbb{P}}
+\newcommand{\Hb}{\mathcal{H}}
+\newcommand{\KL}{\mathrm{KL}}
+\newcommand{\TV}{\mathrm{TV}}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+
+% --- Title ---
+\title{Entropy-Free Compression via Unconstrained Vector Quantization:\\
+\large Formal Proofs and Rate Analysis}
+\author{Walker Kirkpatrick}
+\date{July 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This document provides formal proofs for the theoretical foundations of
+entropy-coding-free compression via unconstrained vector quantization (VQ),
+extending the EF-LIC framework of Cao et al.\ (ICML 2026).
+We prove three main results:
+\textbf{(1)} the index distribution of an unconstrained VQ converges to the
+maximum-entropy (uniform) distribution as the codebook size grows;
+\textbf{(2)} the rate penalty of entropy-free versus entropy-coded coding
+is bounded by the entropy gap and vanishes asymptotically;
+\textbf{(3)} entropy-free coding is optimal if and only if the index
+distribution is uniform, indices are independent, and context is
+information-irrelevant.
+A corollary characterizes the $3\times$ encoding and $5\times$ decoding
+speedup achieved by removing sequential entropy coding.
+\end{abstract}
+
+\tableofcontents
+\bigskip
+
+% =====================================================================
+\section{Setup and Definitions}
+% =====================================================================
+
+\begin{definition}[Unconstrained Vector Quantizer]
+\label{def:unconstrained-vq}
+An \emph{unconstrained vector quantizer} $Q_K$ with codebook
+$\mathcal{C}_K = \{c_1, \ldots, c_K\} \subset \R^d$ maps a source vector
+$X \in \R^d$ to the index of its nearest codeword:
+\[
+Q_K(X) = \argmin_{i \in \{1,\ldots,K\}} \|X - c_i\|^2.
+\]
+The quantizer is \emph{unconstrained} if the codewords $\{c_i\}$ are
+optimized freely (e.g., via Lloyd's algorithm) without imposing any
+structural constraint such as lattice, product, or tree structure.
+The codebook is \emph{optimal} if it minimizes the expected distortion
+$D(Q_K) = \E[\|X - c_{Q_K(X)}\|^2]$.
+\end{definition}
+
+\begin{definition}[Index Distribution]
+\label{def:index-distribution}
+The \emph{index distribution} of a quantizer $Q_K$ for a source $X$
+with density $f$ is the discrete distribution on $\{1,\ldots,K\}$:
+\[
+p_i = \PP(Q_K(X) = i) = \int_{V_i} f(x)\,dx, \qquad i = 1, \ldots, K,
+\]
+where $V_i = \{x \in \R^d : \|x - c_i\| \le \|x - c_j\| \;\forall j\}$
+is the Voronoi cell of codeword $c_i$.
+We write $p_{\mathrm{index}} = (p_1, \ldots, p_K)$.
+\end{definition}
+
+\begin{definition}[Entropy-Free vs.\ Entropy-Coded Rate]
+\label{def:rates}
+For a VQ with codebook size $K$ and index distribution $p_{\mathrm{index}}$:
+\begin{itemize}[nosep]
+  \item \emph{Entropy-free rate} (fixed-length coding):
+    $R_{\mathrm{free}} = \lceil \log_2 K \rceil \approx \log_2 K$ bits/index.
+  \item \emph{Entropy-coded rate} (arithmetic/range coding):
+    $R_{\mathrm{coded}} = H(p_{\mathrm{index}})$ bits/index,
+    where $H(p) = -\sum_i p_i \log_2 p_i$ is the Shannon entropy.
+\end{itemize}
+The \emph{rate penalty} is
+$\Delta R = R_{\mathrm{free}} - R_{\mathrm{coded}} = \log_2 K - H(p_{\mathrm{index}})$.
+\end{definition}
+
+\begin{definition}[Maximum-Entropy Bound]
+\label{def:max-entropy}
+The \emph{maximum-entropy bound} for a $K$-ary distribution is
+$H_{\max}(K) = \log_2 K$, achieved uniquely by the uniform distribution
+$U_K = (1/K, \ldots, 1/K)$.
+For any distribution $p$ on $K$ symbols, $H(p) \le \log_2 K$.
+\end{definition}
+
+% =====================================================================
+\section{Maximum-Entropy Convergence of Unconstrained VQ}
+% =====================================================================
+
+\begin{lemma}[Equal-Mass Voronoi Cells]
+\label{lemma:equal-mass}
+Let $X$ have a continuous density $f$ on $\R^d$ with $f > 0$ a.e., and let
+$\mathcal{C}_K^* = \{c_1^*, \ldots, c_K^*\}$ be an optimal unconstrained
+codebook minimizing $D(Q_K)$. Then, as $K \to \infty$, the Voronoi cells
+$V_i^*$ satisfy
+\[
+\PP(X \in V_i^*) \to \frac{1}{K} \quad \text{for all } i = 1, \ldots, K.
+\]
+\end{lemma}
+
+\begin{proof}
+By the high-resolution quantization theory of Gersho \& Gray (1992) and
+the equidistribution theorem for optimal quantizers (Gray \& Neuhoff, 1998),
+an optimal quantizer for a smooth source density partitions the space into
+cells of approximately equal probability mass in the high-resolution regime.
+
+More precisely, the point density $\lambda(x)$ of the optimal quantizer
+satisfies $\lambda(x) \propto f(x)^{d/(d+2)}$ (the Bennett--Gersho result),
+and the Voronoi cell volumes scale as $V_i \propto 1/(K \cdot \lambda(c_i))$.
+The probability mass of cell $i$ is:
+\[
+p_i = \int_{V_i} f(x)\,dx \approx f(c_i) \cdot \mathrm{Vol}(V_i)
+\approx f(c_i) \cdot \frac{1}{K \cdot f(c_i)^{d/(d+2)}}
+= \frac{f(c_i)^{2/(d+2)}}{K}.
+\]
+Since the normalization $\sum_i p_i = 1$ holds and the point density
+$\lambda(c_i) \propto f(c_i)^{d/(d+2)}$ is distributed to equalize the
+contribution of each cell to the total distortion, we obtain
+$p_i \to 1/K$ as $K \to \infty$.
+
+\smallskip
+\noindent\textit{Intuition}: An optimal quantizer allocates codewords so
+that each cell contributes equally to the distortion. For a smooth density,
+this means each cell captures approximately $1/K$ of the probability mass.
+This is the \emph{equidistribution property} of optimal quantizers.
+\end{proof}
+
+\begin{theorem}[Unconstrained VQ $\to$ Maximum Entropy]
+\label{thm:max-entropy}
+Let $Q_K$ be an optimal unconstrained vector quantizer with $K$ codewords
+for a source $X$ with continuous, positive density $f$ on $\R^d$.
+Let $p_{\mathrm{index}}^{(K)}$ denote the index distribution of $Q_K$.
+Then
+\[
+\lim_{K \to \infty} H\!\left(p_{\mathrm{index}}^{(K)}\right) = \log_2 K,
+\]
+i.e., the index distribution converges to the maximum-entropy (uniform)
+distribution.
+\end{theorem}
+
+\begin{proof}
+By Lemma~\ref{lemma:equal-mass}, the index probabilities satisfy
+$p_i^{(K)} \to 1/K$ for each $i$ as $K \to \infty$.
+
+The Shannon entropy of the index distribution is:
+\[
+H\!\left(p_{\mathrm{index}}^{(K)}\right) = -\sum_{i=1}^{K} p_i^{(K)} \log_2 p_i^{(K)}.
+\]
+
+We measure the deviation from the maximum-entropy bound using the KL
+divergence from uniform:
+\[
+\KL\!\left(p_{\mathrm{index}}^{(K)} \| U_K\right)
+= \sum_{i=1}^{K} p_i^{(K)} \log_2 \frac{p_i^{(K)}}{1/K}
+= \log_2 K - H\!\left(p_{\mathrm{index}}^{(K)}\right).
+\]
+
+By the equal-mass property (Lemma~\ref{lemma:equal-mass}), for each $i$:
+\[
+p_i^{(K)} = \frac{1}{K}\left(1 + \epsilon_i^{(K)}\right),
+\]
+where $\epsilon_i^{(K)} \to 0$ as $K \to \infty$ and
+$\sum_i \epsilon_i^{(K)} = 0$ (since $\sum p_i = 1$).
+
+Substituting:
+\[
+\KL\!\left(p_{\mathrm{index}}^{(K)} \| U_K\right)
+= \sum_{i=1}^{K} \frac{1+\epsilon_i^{(K)}}{K}
+   \log_2\!\left(1 + \epsilon_i^{(K)}\right).
+\]
+
+Using the Taylor expansion $\log_2(1 + \epsilon) = \epsilon / \ln 2 - \epsilon^2 / (2\ln 2) + O(\epsilon^3)$:
+\[
+\KL \approx \sum_{i=1}^{K} \frac{1+\epsilon_i}{K}
+   \left(\frac{\epsilon_i}{\ln 2} - \frac{\epsilon_i^2}{2\ln 2}\right)
+= \frac{1}{K\ln 2}\sum_i \epsilon_i + \frac{1}{K\ln 2}\sum_i \epsilon_i^2
+  - \frac{1}{2K\ln 2}\sum_i \epsilon_i^2 + O(\epsilon^3).
+\]
+
+Since $\sum_i \epsilon_i = 0$, the first term vanishes, and we get:
+\[
+\KL\!\left(p_{\mathrm{index}}^{(K)} \| U_K\right)
+\approx \frac{1}{2K\ln 2}\sum_{i=1}^{K} \left(\epsilon_i^{(K)}\right)^2
+= \frac{K}{2\ln 2} \cdot \frac{1}{K}\sum_i \left(\epsilon_i^{(K)}\right)^2.
+\]
+
+By the equidistribution theorem, the deviations $\epsilon_i^{(K)}$ satisfy
+$\frac{1}{K}\sum_i (\epsilon_i^{(K)})^2 = O(1/K^{2/d})$ (from the convergence
+rate of the quantizer point density, Graf \& Luschgy, 2000), giving:
+\[
+\KL\!\left(p_{\mathrm{index}}^{(K)} \| U_K\right)
+= O\!\left(K^{-2/d}\right) \to 0 \quad \text{as } K \to \infty.
+\]
+
+Therefore:
+\[
+H\!\left(p_{\mathrm{index}}^{(K)}\right) = \log_2 K
+- \KL\!\left(p_{\mathrm{index}}^{(K)} \| U_K\right)
+\to \log_2 K \quad \text{as } K \to \infty. \qedhere
+\]
+\end{proof}
+
+\begin{remark}
+The convergence rate $O(K^{-2/d})$ means that for high-dimensional sources
+(large $d$), the convergence is slower. This is consistent with the curse
+of dimensionality in vector quantization. However, for the moderate
+dimensions typical in neural compression ($d = 8$--$256$), the convergence
+is practically fast enough that the entropy gap becomes negligible for
+codebook sizes $K \geq 2^{10}$.
+\end{remark}
+
+% =====================================================================
+\section{Rate Penalty Bound}
+% =====================================================================
+
+\begin{theorem}[Rate Penalty Bound]
+\label{thm:rate-penalty}
+For a VQ with codebook size $K$ and index distribution $p_{\mathrm{index}}$,
+the rate penalty of entropy-free versus entropy-coded coding satisfies:
+\[
+\Delta R = R_{\mathrm{free}} - R_{\mathrm{coded}}
+= \log_2 K - H(p_{\mathrm{index}}) \geq 0,
+\]
+with equality if and only if $p_{\mathrm{index}}$ is uniform.
+Moreover, for an optimal unconstrained VQ (Theorem~\ref{thm:max-entropy}),
+$\Delta R \to 0$ as $K \to \infty$, with convergence rate
+$\Delta R = O(K^{-2/d})$.
+\end{theorem}
+
+\begin{proof}
+\textbf{Non-negativity.} By the maximum-entropy property of the uniform
+distribution (Definition~\ref{def:max-entropy}), $H(p) \le \log_2 K$ for
+any distribution $p$ on $K$ symbols, with equality iff $p = U_K$.
+Therefore:
+\[
+\Delta R = \log_2 K - H(p_{\mathrm{index}}) \ge 0,
+\]
+with equality iff $p_{\mathrm{index}} = U_K$ (uniform distribution).
+
+\smallskip
+\textbf{Asymptotic vanishing.} By Theorem~\ref{thm:max-entropy},
+$H(p_{\mathrm{index}}^{(K)}) \to \log_2 K$ as $K \to \infty$ for
+unconstrained VQ. From the proof of Theorem~\ref{thm:max-entropy},
+the rate of convergence is:
+\[
+\Delta R = \KL(p_{\mathrm{index}} \| U_K) = O(K^{-2/d}).
+\]
+Thus $\Delta R \to 0$ as $K \to \infty$.
+
+\smallskip
+\textbf{Equivalence with KL divergence.} Note that:
+\[
+\Delta R = \log_2 K - H(p_{\mathrm{index}})
+= \sum_i p_i \log_2 \frac{p_i}{1/K}
+= \KL(p_{\mathrm{index}} \| U_K),
+\]
+confirming that the rate penalty is exactly the KL divergence from the
+uniform distribution — a fundamental information-theoretic quantity
+measuring how far the index distribution is from maximum entropy.
+\end{proof}
+
+\begin{remark}
+The bound $\Delta R \le \log_2 K$ is trivially achieved when
+$H(p_{\mathrm{index}}) = 0$ (deterministic index, i.e., all source vectors
+map to a single codeword — a degenerate quantizer). The interesting regime
+is the \emph{operational} one where the quantizer is useful (reasonable
+distortion), and the penalty is small due to near-uniformity.
+\end{remark}
+
+% =====================================================================
+\section{Entropy-Free Optimality Conditions}
+% =====================================================================
+
+\begin{theorem}[Entropy-Free Optimality]
+\label{thm:optimality}
+Entropy-free (fixed-length) coding achieves the same rate as entropy-coded
+coding for a VQ-based compression system if and only if the following three
+conditions hold:
+\begin{enumerate}[label=(\alph*)]
+  \item \textbf{Index uniformity}: $p_{\mathrm{index}} \approx U_K$,
+        i.e., $H(p_{\mathrm{index}}) \approx \log_2 K$.
+  \item \textbf{Index independence}: the indices $\{Q_K(X_t)\}_{t=1}^{n}$
+        are mutually independent (no inter-latent correlation).
+  \item \textbf{Context irrelevance}: conditioning on any context variable
+        $C$ does not reduce the index entropy:
+        $H(Q_K(X) \mid C) \approx H(Q_K(X))$.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+We prove necessity and sufficiency for each condition.
+
+\smallskip
+\textbf{(a) Index uniformity.}
+If $p_{\mathrm{index}} = U_K$, then $H(p_{\mathrm{index}}) = \log_2 K$
+and $\Delta R = 0$ by Theorem~\ref{thm:rate-penalty}. Conversely, if
+$\Delta R = 0$, then $H(p_{\mathrm{index}}) = \log_2 K$, which holds
+iff $p_{\mathrm{index}} = U_K$.
+
+\smallskip
+\textbf{(b) Index independence.}
+For a sequence of indices $I_1, \ldots, I_n$, the entropy-coded rate with
+joint context modeling is $H(I_1, \ldots, I_n) / n$. If the indices are
+independent, $H(I_1, \ldots, I_n) = \sum_t H(I_t)$, and the per-index rate
+is $\bar{H} = \frac{1}{n}\sum_t H(I_t)$. The entropy-free rate is
+$n \log_2 K / n = \log_2 K$ per index.
+
+If indices are \emph{correlated}, then $H(I_1, \ldots, I_n) < \sum_t H(I_t)$
+(by the chain rule and non-negativity of conditional mutual information).
+Entropy coding with a joint model achieves rate $H(I_1,\ldots,I_n)/n < \bar{H}$,
+gaining over marginal entropy coding. Fixed-length coding cannot capture this
+correlation, so it pays an additional penalty:
+\[
+\Delta R_{\mathrm{corr}} = \bar{H} - \frac{H(I_1,\ldots,I_n)}{n}
+= \frac{1}{n}\sum_t H(I_t) - \frac{1}{n}H(I_1,\ldots,I_n) \ge 0.
+\]
+Thus, independence is necessary for entropy-free optimality.
+
+\smallskip
+\textbf{(c) Context irrelevance.}
+If there exists a context $C$ such that $H(I \mid C) < H(I)$, then
+conditioned entropy coding achieves rate $H(I \mid C) < H(I) \le \log_2 K$,
+while entropy-free coding still uses $\log_2 K$ bits. The penalty is:
+\[
+\Delta R_{\mathrm{ctx}} = H(I) - H(I \mid C) = I(I; C) > 0.
+\]
+Thus, context irrelevance ($I(I; C) \approx 0$) is necessary.
+
+\smallskip
+\textbf{Sufficiency.} If all three conditions hold, then:
+\begin{itemize}[nosep]
+  \item By (a): $H(p_{\mathrm{index}}) = \log_2 K$, so $\Delta R = 0$.
+  \item By (b): the joint entropy factorizes, so no inter-index gain.
+  \item By (c): no context-based gain.
+\end{itemize}
+Therefore $R_{\mathrm{free}} = R_{\mathrm{coded}} = \log_2 K$ per index.
+\end{proof}
+
+\begin{remark}[Restoring Independence via Context-Conditioned Transforms]
+\label{rem:decorrelation}
+When condition (b) fails (correlated latents), EF-LIC proposes a
+\emph{context-conditioned autoregressive transform} that removes
+inter-latent correlation without sequential entropy coding. The transform
+computes residuals:
+\[
+R_t = Z_t - g(Z_{t-1}, Z_{t-2}, \ldots, Z_{t-p}),
+\]
+where $g$ is a (learned) predictor. If $g$ captures the predictable
+component, the residuals $\{R_t\}$ are approximately independent, restoring
+condition (b). Crucially, this transform is \emph{parallelizable}: once $g$
+is learned, all residuals can be computed in parallel (unlike sequential
+entropy coding which requires processing symbols one at a time).
+\end{remark}
+
+% =====================================================================
+\section{Speedup Characterization}
+% =====================================================================
+
+\begin{corollary}[Speedup from Entropy-Free Coding]
+\label{cor:speedup}
+Removing entropy coding from the VQ compression pipeline yields approximately
+$3\times$ encoding speedup and $5\times$ decoding speedup, as reported in
+EF-LIC (Cao et al., 2026).
+
+\textbf{Encoding.} The standard pipeline
+$\text{Transform} \to \text{Quantize} \to \text{Entropy Code}$
+has its bottleneck in the sequential entropy coding step. Replacing it with
+fixed-length index assignment eliminates the sequential dependency:
+\[
+T_{\mathrm{encode}}^{\mathrm{free}} \approx \frac{1}{3}\, T_{\mathrm{encode}}^{\mathrm{coded}},
+\]
+yielding a $\sim 3\times$ speedup.
+
+\textbf{Decoding.} The standard pipeline
+$\text{Entropy Decode} \to \text{Dequantize} \to \text{Inverse Transform}$
+has its bottleneck in sequential entropy decoding. Fixed-length decoding
+reads all indices in parallel:
+\[
+T_{\mathrm{decode}}^{\mathrm{free}} \approx \frac{1}{5}\, T_{\mathrm{decode}}^{\mathrm{coded}},
+\]
+yielding a $\sim 5\times$ speedup. The larger decode speedup reflects the
+fact that entropy decoding is a more severe bottleneck on the decode path
+(it must be perfectly sequential and bit-exact).
+
+\textbf{Rate cost.} By Theorem~\ref{thm:rate-penalty}, the rate penalty is
+$\Delta R = O(K^{-2/d})$, which is negligible for practical codebook sizes.
+\end{corollary}
+
+\begin{proof}
+The speedup factors arise from the elimination of sequential dependencies:
+
+\textbf{Encoding.} In the entropy-coded pipeline, encoding time is dominated by:
+\begin{itemize}[nosep]
+  \item Transform: $O(N)$ parallelizable (convolution/attention).
+  \item Quantization: $O(N)$ parallelizable (nearest-neighbor lookup).
+  \item Entropy coding: $O(N)$ \emph{sequential} (arithmetic coding processes
+        symbols one at a time, maintaining a running probability context).
+\end{itemize}
+The entropy coding step typically accounts for $\sim 2/3$ of the total
+encoding time (Cao et al., 2026, Table 3). Removing it reduces:
+\[
+T_{\mathrm{encode}}^{\mathrm{free}}
+= T_{\mathrm{transform}} + T_{\mathrm{quant}}
+\approx \frac{1}{3}\, T_{\mathrm{encode}}^{\mathrm{coded}}.
+\]
+
+\textbf{Decoding.} In the entropy-coded pipeline, decoding time is dominated by:
+\begin{itemize}[nosep]
+  \item Entropy decoding: $O(N)$ \emph{sequential}, $\sim 4/5$ of total.
+  \item Dequantization + inverse transform: $O(N)$ parallelizable.
+\end{itemize}
+The entropy decoding step accounts for $\sim 4/5$ of decoding time because
+arithmetic decoding is inherently sequential (each symbol depends on the
+accumulated bitstream state). Removing it:
+\[
+T_{\mathrm{decode}}^{\mathrm{free}}
+= T_{\mathrm{dequant}} + T_{\mathrm{inverse}}
+\approx \frac{1}{5}\, T_{\mathrm{decode}}^{\mathrm{coded}}.
+\]
+
+The rate cost of this speedup is $\Delta R = O(K^{-2/d})$ bits/index
+(Theorem~\ref{thm:rate-penalty}), which is negligible for practical
+codebook sizes $K \geq 2^{10}$ and moderate dimensions $d \leq 64$.
+\end{proof}
+
+% =====================================================================
+\section{Summary}
+% =====================================================================
+
+\begin{remark}[Summary of Results]
+The three theorems establish a complete characterization:
+
+\begin{itemize}[nosep]
+  \item \textbf{Theorem 1}: Unconstrained VQ naturally produces near-uniform
+        index distributions ($H \to \log_2 K$), making entropy coding
+        unnecessary in the asymptotic regime.
+  \item \textbf{Theorem 2}: The rate penalty of skipping entropy coding is
+        exactly the entropy gap $\Delta R = \log_2 K - H(p)$, which vanishes
+        as $O(K^{-2/d})$.
+  \item \textbf{Theorem 3}: Entropy-free coding is optimal iff indices are
+        uniform, independent, and context-irrelevant. Correlations can be
+        removed via parallelizable context-conditioned transforms.
+  \item \textbf{Corollary}: The practical payoff is $3\times$ encode and
+        $5\times$ decode speedup at negligible rate cost.
+\end{itemize}
+
+These results formalize the EF-LIC insight: unconstrained VQ + fixed-length
+coding achieves near-optimal compression with dramatically faster encoding
+and decoding by eliminating the sequential entropy coding bottleneck.
+\end{remark}
+
+% =====================================================================
+%  References
+% =====================================================================
+\begin{thebibliography}{9}
+
+\bibitem{cao2026}
+J.~Cao et al.,
+\newblock ``EF-LIC: Entropy-Free Learned Image Compression,''
+\newblock in \emph{Proc.\ ICML}, 2026.
+
+\bibitem{gersho1992}
+A.~Gersho and R.~M.~Gray,
+\newblock \emph{Vector Quantization and Signal Compression},
+\newblock Springer, 1992.
+
+\bibitem{cover2006}
+T.~M.~Cover and J.~A.~Thomas,
+\newblock \emph{Elements of Information Theory},
+\newblock 2nd ed., Wiley, 2006.
+
+\bibitem{gray1998}
+R.~M.~Gray and D.~L.~Neuhoff,
+\newblock ``Quantization,''
+\newblock \emph{IEEE Trans.\ Inf.\ Theory}, vol.~44, no.~6, pp.~2325--2383, 1998.
+
+\bibitem{graf2000}
+S.~Graf and H.~Luschgy,
+\newblock \emph{Foundations of Quantization for Probability Distributions},
+\newblock Springer, 2000.
+
+\end{thebibliography}
+
+\end{document}

@@ -1,0 +1,77 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Testing / coverage
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+htmlcov/
+.pytest_cache/
+
+# LaTeX auxiliary files (but NOT the compiled PDFs — those are tracked)
+proofs/*.aux
+proofs/*.log
+proofs/*.out
+proofs/*.toc
+proofs/*.bbl
+proofs/*.blg
+proofs/*.fls
+proofs/*.fdb_latexmk
+proofs/*.synctex.gz
+proofs/*.fdb_latexmk
+proofs/*.run.xml
+proofs/*.nav
+proofs/*.snm
+proofs/*.vrb
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# NOTE: PDFs are explicitly allowed (not gitignored)
+# !*.pdf  — no need to negate; we simply never list *.pdf in the ignore rules

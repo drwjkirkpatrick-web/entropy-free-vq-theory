@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "entropy-free-vq-theory"
+version = "0.1.0"
+description = "Formal theory of entropy-coding-free compression via unconstrained vector quantization, extending EF-LIC (Cao et al., ICML 2026)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Walker Kirkpatrick" }
+]
+keywords = ["vector quantization", "entropy coding", "compression", "rate-distortion", "information theory", "EF-LIC"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Information Theory",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    "numpy>=1.20",
+    "scipy>=1.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+test = ["pytest>=7.0"]
+
+[tool.setuptools.packages.find]
+include = ["entropy_free_vq_theory*"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
